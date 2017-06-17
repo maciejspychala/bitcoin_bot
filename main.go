@@ -28,6 +28,12 @@ type wallet struct {
     CryptoAddress string
 }
 
+type tick struct {
+    Bid float64
+    Ask float64
+    Last float64
+}
+
 type client struct {
     apiKey string
     apiSecret string
@@ -96,6 +102,14 @@ func (c *client) getWallets() (wallets []wallet, e error) {
     err = json.Unmarshal(response.Result, &wallets)
     check(err)
     return wallets, err
+}
+
+func (c *client) getTick(market string) (t tick, e error) {
+    response, err := c.get("/public/getticker", map[string]string {"market" : market})
+    check(err)
+    err = json.Unmarshal(response.Result, &t)
+    check(err)
+    return t, err
 }
 
 func main() {
