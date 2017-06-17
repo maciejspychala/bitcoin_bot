@@ -12,7 +12,7 @@ import (
     "encoding/json"
 )
 
-const apiUrl = "https://bittrex.com/api/v1.1"
+const apiUrl = "https://bittrex.com/api/"
 
 type jsonResponse struct {
     Success bool
@@ -34,6 +34,41 @@ type tick struct {
     Last float64
 }
 
+type tickInterval struct {
+    O float64
+    H float64
+    L float64
+    C float64
+    V float64
+    T tickTime
+}
+
+type tickTime struct {
+    date time.Time
+}
+
+func (t *tickTime) UnmarshalJSON(b []byte) error {
+    date, err := time.Parse("\"2006-01-02T15:04:05\"", string(b))
+    t.date = date
+    return err
+}
+
+type summary struct {
+    MarketName string
+    High float64
+    Low float64
+    Volume float64
+    Last float64
+    BaseVolume float64
+    TimeStamp string
+    Bid float64
+    Ask float64
+    OpenBuyOrders int32
+    OpenSellOrders int32
+    PrevDay float64
+    Created string
+}
+
 type client struct {
     apiKey string
     apiSecret string
@@ -42,6 +77,10 @@ type client struct {
 
 func (w *wallet) toString() (text string) {
     return fmt.Sprintf("%s\t%12.8f", w.Currency, w.Available)
+}
+
+func (s *summary) toString() (text string) {
+    return fmt.Sprintf("%-12s\t%15.8f\t%15.8f\tB:%15.8f\tA:%15.8f", s.MarketName, s.Last, s.PrevDay, s.Bid, s.Ask)
 }
 
 func check(e error) {
@@ -61,8 +100,9 @@ func newClient(apiKey, apiSecret string) (c *client) {
     return &client{apiKey, apiSecret, &http.Client{Timeout: 10 * time.Second}}
 }
 
-func (c *client) get(method string, params map[string]string) (jsonResp jsonResponse, e error) {
-    req, err := http.NewRequest("GET", apiUrl + method, nil)
+func (c *client) get(method string, params map[string]string, version string) (jsonResp jsonResponse, e error) {
+    url := fmt.Sprintf("%sv%s%s", apiUrl, version, method)
+    req, err := http.NewRequest("GET", url, nil)
     check(err)
 
     req.Header.Add("Accept", "application/json")
@@ -97,7 +137,7 @@ func (c *client) get(method string, params map[string]string) (jsonResp jsonResp
 }
 
 func (c *client) getWallets() (wallets []wallet, e error) {
-    response, err := c.get("/account/getbalances", nil)
+    response, err := c.get("/account/getbalances", nil, "1.1")
     check(err)
     err = json.Unmarshal(response.Result, &wallets)
     check(err)
@@ -105,11 +145,26 @@ func (c *client) getWallets() (wallets []wallet, e error) {
 }
 
 func (c *client) getTick(market string) (t tick, e error) {
-    response, err := c.get("/public/getticker", map[string]string {"market" : market})
+    response, err := c.get("/public/getticker", map[string]string {"market" : market}, "1.1")
     check(err)
     err = json.Unmarshal(response.Result, &t)
     check(err)
     return t, err
+}
+
+func (c *client) getIntervalTicks(market string, interval string) (t []tickInterval, e error) {
+    response, err := c.get("/pub/market/GetTicks",
+        map[string]string {"marketName" : market, "tickInterval" : interval}, "2.0")
+    check(err)
+    err = json.Unmarshal(response.Result, &t)
+    check(err)
+    return t, err
+}
+
+func (c *client) getSummary() (s []summary, e error) {
+    response, err := c.get("/public/getmarketsummaries", nil, "1.1")
+    err = json.Unmarshal(response.Result, &s)
+    return s, err
 }
 
 func main() {
@@ -131,4 +186,9 @@ func main() {
         wholeWalletValue += btcValue
     }
     fmt.Printf("\nwallet value : %12.8f btc\n", wholeWalletValue)
+
+    summaries, _ := client.getSummary()
+    for _, s := range summaries {
+        fmt.Printf("%s\n", s.toString())
+    }
 }
