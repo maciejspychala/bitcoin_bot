@@ -9,20 +9,39 @@ import (
     "encoding/hex"
     "io/ioutil"
     "net/http"
+    "encoding/json"
 )
 
 const apiUrl = "https://bittrex.com/api/v1.1"
 
-func check(e error) {
-    if e != nil {
-        panic(e)
-    }
+type jsonResponse struct {
+    Success bool
+    Message string
+    Result json.RawMessage
+}
+
+type wallet struct {
+    Currency string
+    Balance float64
+    Available float64
+    Pending float64
+    CryptoAddress string
 }
 
 type client struct {
     apiKey string
     apiSecret string
     httpClient *http.Client
+}
+
+func (w *wallet) toString() (text string) {
+    return fmt.Sprintf("%s\t%12.8f\t", w.Currency, w.Available)
+}
+
+func check(e error) {
+    if e != nil {
+        panic(e)
+    }
 }
 
 func loadCredentials() (apiKey, secret string) {
@@ -61,10 +80,23 @@ func (c *client) get(method string) (response []byte, e error) {
     return ioutil.ReadAll(resp.Body)
 }
 
+func (c *client) getWallets() (wallets []wallet, e error) {
+    response, err := c.get("/account/getbalances")
+    check(err)
+    var jsonResp jsonResponse
+    err = json.Unmarshal(response, &jsonResp)
+    check(err)
+    err = json.Unmarshal(jsonResp.Result, &wallets)
+    check(err)
+    return wallets, err
+}
+
 func main() {
     key, secret := loadCredentials()
     client := newClient(key, secret)
-    response, err := client.get("/account/getbalances")
+    wallets, err := client.getWallets()
     check(err)
-    fmt.Printf("%s\n", response)
+    for _, w := range wallets {
+        fmt.Printf("%s\n", w.toString())
+    }
 }
