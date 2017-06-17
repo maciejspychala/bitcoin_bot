@@ -55,7 +55,7 @@ func newClient(apiKey, apiSecret string) (c *client) {
     return &client{apiKey, apiSecret, &http.Client{Timeout: 10 * time.Second}}
 }
 
-func (c *client) get(method string) (response []byte, e error) {
+func (c *client) get(method string) (jsonResp jsonResponse, e error) {
     req, err := http.NewRequest("GET", apiUrl + method, nil)
     check(err)
 
@@ -75,18 +75,17 @@ func (c *client) get(method string) (response []byte, e error) {
 
     resp, err := c.httpClient.Do(req)
     check(err)
-
     defer resp.Body.Close()
-    return ioutil.ReadAll(resp.Body)
+
+    respBody, _ := ioutil.ReadAll(resp.Body)
+    err = json.Unmarshal(respBody, &jsonResp)
+    return jsonResp, err
 }
 
 func (c *client) getWallets() (wallets []wallet, e error) {
     response, err := c.get("/account/getbalances")
     check(err)
-    var jsonResp jsonResponse
-    err = json.Unmarshal(response, &jsonResp)
-    check(err)
-    err = json.Unmarshal(jsonResp.Result, &wallets)
+    err = json.Unmarshal(response.Result, &wallets)
     check(err)
     return wallets, err
 }
