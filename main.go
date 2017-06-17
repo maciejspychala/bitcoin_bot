@@ -41,7 +41,7 @@ type client struct {
 }
 
 func (w *wallet) toString() (text string) {
-    return fmt.Sprintf("%s\t%12.8f\t", w.Currency, w.Available)
+    return fmt.Sprintf("%s\t%12.8f", w.Currency, w.Available)
 }
 
 func check(e error) {
@@ -117,7 +117,18 @@ func main() {
     client := newClient(key, secret)
     wallets, err := client.getWallets()
     check(err)
+    var wholeWalletValue float64
+    fmt.Printf("%s\t%12s\t%12s\n", "name", "balance", "btc value")
     for _, w := range wallets {
-        fmt.Printf("%s\n", w.toString())
+        var btcValue float64
+        if w.Currency == "BTC" {
+            btcValue = w.Balance
+        } else {
+            t, _ := client.getTick("BTC-" + w.Currency)
+            btcValue = t.Last * w.Balance
+        }
+        fmt.Printf("%s\t%12.8f\n", w.toString(), btcValue)
+        wholeWalletValue += btcValue
     }
+    fmt.Printf("\nwallet value : %12.8f btc\n", wholeWalletValue)
 }
