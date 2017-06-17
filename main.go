@@ -55,16 +55,23 @@ func newClient(apiKey, apiSecret string) (c *client) {
     return &client{apiKey, apiSecret, &http.Client{Timeout: 10 * time.Second}}
 }
 
-func (c *client) get(method string) (jsonResp jsonResponse, e error) {
+func (c *client) get(method string, params map[string]string) (jsonResp jsonResponse, e error) {
     req, err := http.NewRequest("GET", apiUrl + method, nil)
     check(err)
 
     req.Header.Add("Accept", "application/json")
 
+
     nonce := time.Now().UnixNano()
     q := req.URL.Query()
+
+    for key, value := range params {
+        q.Set(key, value)
+    }
+
     q.Set("apikey", c.apiKey)
     q.Set("nonce", fmt.Sprintf("%d", nonce))
+
     req.URL.RawQuery = q.Encode()
 
     mac := hmac.New(sha512.New, []byte(c.apiSecret))
@@ -72,6 +79,7 @@ func (c *client) get(method string) (jsonResp jsonResponse, e error) {
     sign := hex.EncodeToString(mac.Sum(nil))
 
     req.Header.Add("apisign", sign)
+
 
     resp, err := c.httpClient.Do(req)
     check(err)
@@ -83,7 +91,7 @@ func (c *client) get(method string) (jsonResp jsonResponse, e error) {
 }
 
 func (c *client) getWallets() (wallets []wallet, e error) {
-    response, err := c.get("/account/getbalances")
+    response, err := c.get("/account/getbalances", nil)
     check(err)
     err = json.Unmarshal(response.Result, &wallets)
     check(err)
