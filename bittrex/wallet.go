@@ -14,7 +14,7 @@ type wallet struct {
 }
 
 func (w *wallet) ToString() (text string) {
-    return fmt.Sprintf("%s\t%12.8f", w.Currency, w.Available)
+    return fmt.Sprintf("%s\t%12.8f", w.Currency, w.Balance)
 }
 
 func (c *Client) GetWallets() (wallets []wallet, e error) {
