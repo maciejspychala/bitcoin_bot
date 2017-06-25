@@ -22,7 +22,7 @@ type Summary struct {
 }
 
 func (s *Summary) ToString() (text string) {
-    return fmt.Sprintf("%-12s\t%15.8f\t%15.8f\tB:%15.8f\tA:%15.8f", s.MarketName, s.Last, s.PrevDay, s.Bid, s.Ask)
+    return fmt.Sprintf("%-12s\t%15.8f\t%15.8f\t%15.8f\t%15.8f", s.MarketName, s.Last, s.PrevDay, s.High, s.Low)
 }
 
 func (c *Client) GetSummary() (s []Summary, e error) {
