@@ -16,8 +16,8 @@ func loadCredentials() (apiKey, secret string) {
 
 func displayWallets(c *Client) {
     wallets, _ := c.GetWallets()
-    fmt.Printf("\n%-10s%15s %15s %11s %15s %15s %15s\n",
-            "name", "price", "prev day", "change", "24 high", "24 low", "btc value")
+    fmt.Printf("\n%-10s%15s %15s %15s %11s %15s %15s %15s\n",
+            "name", "balance", "price", "prev day", "change", "24 high", "24 low", "btc value")
     summaries, _ := c.GetSummary()
     var wholeWalletValue float64
     for _, s := range summaries {
@@ -25,10 +25,17 @@ func displayWallets(c *Client) {
             if s.MarketName == "BTC-" + w.Currency && w.Balance > 0.0 {
                 var btcValue float64
                 btcValue = w.Balance * s.Last
-                fmt.Printf("%-10s%15.8f %15.8f %+9.2f %% %15.8f %15.8f %15.8f\n",
-                        w.Currency, s.Last, s.PrevDay, ((s.Last / s.PrevDay) - 1.0) * 100.0  ,s.High, s.Low, btcValue)
+                fmt.Printf("%-10s%15.8f %15.8f %15.8f %+9.2f %% %15.8f %15.8f %15.8f\n",
+                        w.Currency, w.Balance, s.Last, s.PrevDay, ((s.Last / s.PrevDay) - 1.0) * 100.0  ,s.High, s.Low, btcValue)
                 wholeWalletValue += btcValue
             }
+        }
+    }
+    for _, w := range wallets {
+        if w.Currency == "BTC" {
+            fmt.Printf("%-10s%15.8f\n", "BTC", w.Balance)
+            wholeWalletValue += w.Balance
+            break
         }
     }
     fmt.Printf("\nwallet value : %12.8f btc\n", wholeWalletValue)
