@@ -3,6 +3,7 @@ package main
 import (
     . "bitcoin/bittrex"
     "fmt"
+    "time"
     "strings"
     "io/ioutil"
 )
@@ -46,4 +47,17 @@ func main() {
     key, secret := loadCredentials()
     client := NewClient(key, secret)
     displayWallets(client)
+    for {
+        ticks, _ := client.GetTicks("BTC-ANS", "fiveMin")
+        for {
+            latestTick, _ := client.GetLatestTick("BTC-ANS", "fiveMin")
+            ema24 := GetEMA(ticks, 24)
+            ema48 := GetEMA(ticks, 48)
+            fmt.Printf("2h: %12.8f\t4h: %12.8f\n", ema24, ema48)
+            if !latestTick.T.Time.Equal(ticks[len(ticks)-1].T.Time) {
+                break
+            }
+            time.Sleep(20 * time.Second)
+        }
+    }
 }
