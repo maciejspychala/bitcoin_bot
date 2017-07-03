@@ -3,6 +3,7 @@ package main
 import (
     . "bitcoin/bittrex"
     "fmt"
+    "math"
     "time"
     "strings"
     "io/ioutil"
@@ -47,16 +48,29 @@ func main() {
     key, secret := loadCredentials()
     client := NewClient(key, secret)
     displayWallets(client)
+    market := "BTC-XRP"
     for {
-        ticks, _ := client.GetTicks("BTC-ANS", "fiveMin")
+        ticks, _ := client.GetTicks(market, "fiveMin")
+        ema24 := GetEMA(ticks, 24)
+        ema48 := GetEMA(ticks, 48)
+        fmt.Printf("2h: %12.8f\t4h: %12.8f\n", ema24, ema48)
+        history, _ := client.GetMarketHistory(market)
+        wantBuyDate := history[0].TimeStamp
+        wantBuyPrice := math.Min(ema24, ema48) * 0.9987
+        fmt.Printf("wanted: date: %v\tprice: %12.8f\n", wantBuyDate, wantBuyPrice)
         for {
-            latestTick, _ := client.GetLatestTick("BTC-ANS", "fiveMin")
-            ema24 := GetEMA(ticks, 24)
-            ema48 := GetEMA(ticks, 48)
-            fmt.Printf("2h: %12.8f\t4h: %12.8f\n", ema24, ema48)
+            latestTick, _ := client.GetLatestTick(market, "fiveMin")
             if !latestTick.T.Time.Equal(ticks[len(ticks)-1].T.Time) {
                 break
             }
+
+            orders, _ := client.GetMarketHistory(market)
+            for _, order := range orders {
+                if wantBuyPrice >= order.Price && wantBuyDate.Time.Before(order.TimeStamp.Time) {
+                    fmt.Printf("[BUY] get: date: %v\tprice: %12.8f\n", order.TimeStamp, order.Price)
+                }
+            }
+
             time.Sleep(20 * time.Second)
         }
     }
