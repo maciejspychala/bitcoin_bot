@@ -49,3 +49,14 @@ func GetTickFromDate(h []HistoryOrder, t TickTime) (tick TickInterval) {
     }
     return tick
 }
+
+func GetMinPriceFromLastOrders(h []HistoryOrder, orders int) float64 {
+    min := h[0].Price
+    for i := 0; i < len(h) && i < orders; i++ {
+        if h[i].Price < min {
+            min = h[i].Price
+        }
+    }
+    return min
+}
+
