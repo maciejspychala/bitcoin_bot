@@ -26,7 +26,7 @@ type Client struct {
 }
 
 func NewClient(apiKey, apiSecret string) (c *Client) {
-	return &Client{apiKey, apiSecret, &http.Client{Timeout: 10 * time.Second}}
+	return &Client{apiKey, apiSecret, &http.Client{Timeout: 15 * time.Second}}
 }
 
 func (c *Client) get(method string, params map[string]string, version string) (jsonResp jsonResponse, e error) {
