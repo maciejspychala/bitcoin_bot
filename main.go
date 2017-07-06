@@ -75,7 +75,7 @@ func formatDate(d time.Time) string {
 	return d.Format("2006-01-02 15:04:05")
 }
 
-func startBot(client *Client, market string) {
+func startFakeBot(client *Client, market string) {
 	earnPercent := 1.015
 	for {
 		ticks, _ := client.GetTicks(market, "fiveMin")
@@ -103,13 +103,78 @@ func startBot(client *Client, market string) {
 	}
 }
 
+func isOrderCompleted(client *Client, market, uuid string) bool {
+	orders, _ := client.GetOpenOrders(market)
+	for _, o := range orders {
+		if o.OrderUUID == uuid {
+			return false
+		}
+	}
+	return true
+}
+
+func waitForOrderCompleted(client *Client, market, uuid string) {
+	for {
+		time.Sleep(30 * time.Second)
+		if isOrderCompleted(client, market, uuid) {
+			break
+		}
+	}
+}
+
+func getBuyPrice(client *Client, market string) (float64, error) {
+	ticks, _ := client.GetTicks(market, "fiveMin")
+	ema24 := GetEMA(ticks, 24)
+	ema48 := GetEMA(ticks, 48)
+	history, err := client.GetMarketHistory(market)
+	buyPrice := math.Min(ema24, ema48) * 0.995
+	minPrice := GetMinPriceFromLastOrders(history, 15)
+	buyPrice = math.Min(buyPrice, minPrice)
+	return buyPrice, err
+}
+
+func startBot(client *Client, market string) {
+	earnPercent := 1.015
+	var buyUUID, sellUUID string
+	for {
+		if buyUUID != "" {
+			err := client.Cancel(buyUUID)
+			if err != nil {
+				fmt.Printf("[%s] cannot cancel order\n", market)
+				if sellUUID != "" {
+					waitForOrderCompleted(client, market, sellUUID)
+				}
+			}
+		}
+		buyPrice, _ := getBuyPrice(client, market)
+		tick, _ := client.GetLatestTick(market, "fiveMin")
+		quantity := 0.008 / buyPrice
+		buyUUID, _ = client.Buy(market, quantity, buyPrice)
+		fmt.Printf("[%s] buyUUID: %s\n", market, buyUUID)
+
+		for {
+			time.Sleep(30 * time.Second)
+			if isOrderCompleted(client, market, buyUUID) {
+				sellPrice := buyPrice * earnPercent
+				sellUUID, _ = client.Sell(market, quantity, sellPrice)
+				waitForOrderCompleted(client, market, sellUUID)
+				break
+			}
+			latestTick, _ := client.GetLatestTick(market, "fiveMin")
+			if !latestTick.T.Time.Equal(tick.T.Time) {
+				break
+			}
+		}
+	}
+}
+
 func main() {
 	key, secret := loadCredentials()
 	client := NewClient(key, secret)
-	//displayWallets(client)
-	var markets = [...]string{"BTC-XMR", "BTC-LTC", "BTC-ZEC", "BTC-NMR", "BTC-MEME"}
+	var markets = [...]string{"BTC-NMR", "BTC-MEME"}
 	for _, m := range markets {
 		go startBot(client, m)
 	}
-	startBot(client, "BTC-MONA")
+	startBot(client, "BTC-OMNI")
+
 }
