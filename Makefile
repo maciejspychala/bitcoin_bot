@@ -1,3 +1,3 @@
 build:
-	gofmt -w **/*.go
+	gofmt -l -w .
 	go build

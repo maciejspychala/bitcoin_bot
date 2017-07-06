@@ -1,11 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	. "github.com/maciejspychala/bitcoin_bot/bittrex"
 	"io/ioutil"
 	"math"
-	"errors"
 	"strings"
 	"time"
 )
@@ -97,7 +97,8 @@ func startBot(client *Client, market string) {
 				}
 				continue
 			}
-			fakeSell(client, wantBuyPrice, wantBuyPrice * earnPercent, sellDate, market)
+			wantSellPrice := wantBuyPrice * earnPercent
+			fakeSell(client, wantBuyPrice, wantSellPrice, sellDate, market)
 		}
 	}
 }
